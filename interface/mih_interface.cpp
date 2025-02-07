@@ -23,7 +23,8 @@ int main (int argc, char**argv) {
 	printf(" -m <number>          Set the number of chunks to use, default 1\n");
 	printf(" -K <number>          Set number of nearest neighbors to be retrieved\n");
 	printf(" -R <number>          Set the number of codes (in Millions) to use in computing the optimal bit reordering, default OFF (0)\n");
-	printf("\n");
+	printf(" -r                   Perform a range seach after the kNN search, set the search range as the largest distance to all k nearest neighbors for each query\n");
+    printf("\n");
 	return 0;
     }
 
@@ -36,6 +37,8 @@ int main (int argc, char**argv) {
     int m = 1;
     UINT32 K = -1;
     size_t R = 0;
+
+    bool doRangeSearch = false;
 	
     for (int argnum = 3; argnum < argc; argnum++) {
 	if (argv[argnum][0] == '-') {
@@ -68,6 +71,9 @@ int main (int argc, char**argv) {
 	    case 'R':
 		R = atoi(argv[++argnum])*1000000;
 		break;
+        case 'r':
+        doRangeSearch = true;
+        break;
 	    default: 
 		printf("Unrecognized Option or Missing Parameter when parsing: %s\n", argv[argnum]);
 		return EXIT_FAILURE;
@@ -133,6 +139,7 @@ int main (int argc, char**argv) {
     printf(" K = %4d |", K);
     printf(" m = %2d |", m);
     printf(" R = %d", (int)R);
+    printf("doRangeSearch = %d", (int)doRangeSearch);
     printf("\n");
 
     /* Run multi-index hashing for K-nearest neighbor search and store the required stats */
