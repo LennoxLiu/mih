@@ -10,7 +10,9 @@ distance on binary codes. Using this code, one can re-run the
 experiments described in the paper. For best results, consider using
 *libhugetlbfs* with multi-index hashing.
 
-*Modefication in this fork* Since I need to perform fast kNN and range search at the same time, I will add an interface for range search into this program.
+***Modefication in this fork***
+
+Since I need to perform fast kNN and range search at the same time, I will add an interface for range search into this program.
 
 ### Compilation
 
