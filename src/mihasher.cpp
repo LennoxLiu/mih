@@ -268,3 +268,86 @@ void mihasher::populate(UINT8 *_codes, UINT32 _N, int dim1codes)
     // 	H[k].cleanup_insert(codes, m, k, mplus, b, dim1codes);
     // delete [] chunks;
 }
+
+// [existing query() and constructor, populate(), etc. remain unchanged]
+
+// ----- New Function for Efficient Range Search -----
+/*
+ * This function performs a range search using the existing MIH structure.
+ * For a given query and a range threshold (typically set to the maximum
+ * Hamming distance among the kNNs), it uses the same “split and enumerate”
+ * mechanism as in query() to traverse the hash tables and count (without duplication)
+ * all database codes whose full Hamming distance from the query is less than or equal
+ * to the threshold.
+ *
+ * Note: For duplicate avoidance a temporary bitarray is allocated.
+ */
+UINT32 mihasher::rangequery_single(UINT8 *query, int range_threshold, int dim1query)
+{
+    // Create a temporary bitarray to track duplicates.
+    bitarray *rCounter = new bitarray;
+    rCounter->init(N);
+
+    UINT32 count = 0;
+    // Allocate temporary array for the m hash-chunk values.
+    UINT64 *chunks = new UINT64[m];
+    split(chunks, query, m, mplus, b);
+
+    // Allocate a local array for enumerating error patterns.
+    // We use a size of (b+1) which is safe since for each substring the number of bits is either b or (b-1).
+    int power[256];  // assuming b is never greater than 255
+
+    // Loop over error levels for each substring.
+    // We iterate s from 0 to d (d was set as ceil((double)D/m) in the constructor).
+    for (int s = 0; s <= d; s++) {
+        for (int k = 0; k < m; k++) {
+            int curb = (k < mplus) ? b : (b - 1);
+            UINT64 chunksk = chunks[k];
+
+            UINT64 bitstr = 0;
+            // Initialize the 'power' array for enumeration.
+            for (int i = 0; i < s; i++) {
+                power[i] = i;
+            }
+            power[s] = curb + 1;  // sentinel
+            int bit = s - 1;
+            
+            while (true) {
+                if (bit != -1) {
+                    // Update the error pattern.
+                    if (power[bit] == bit)
+                        bitstr ^= (UINT64)1 << power[bit];
+                    else
+                        bitstr ^= (UINT64)3 << (power[bit]-1);
+                    power[bit]++;
+                    bit--;
+                } else {
+                    int size = 0;
+                    UINT32 *arr = H[k].query(chunksk ^ bitstr, &size);
+                    if (size > 0) {
+                        for (int c = 0; c < size; c++) {
+                            UINT32 index = arr[c];
+                            if (!rCounter->get(index)) {
+                                rCounter->set(index);
+                                int hammd = match(codes + (UINT64)index * (B_over_8), query, B_over_8);
+                                if (hammd <= range_threshold) {
+                                    count++;
+                                }
+                            }
+                        }
+                    }
+                    while (++bit < s && power[bit] == power[bit+1]-1) {
+                        bitstr ^= (UINT64)1 << (power[bit]-1);
+                        power[bit] = bit;
+                    }
+                    if (bit == s)
+                        break;
+                }
+            }
+        }
+    }
+
+    delete [] chunks;
+    delete rCounter;
+    return count;
+}

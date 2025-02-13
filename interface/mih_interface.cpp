@@ -13,6 +13,12 @@
 
 #include "reorder.h"
 
+// After the modification, when the –r flag is enabled, the output remains in the same overall format. 
+// However, the content of result.nres is changed: instead of a full histogram of counts per Hamming distance, 
+// each row now has its first entry set to the range search result (that is, the total number of database codes
+// whose full Hamming distance from the query does not exceed the maximum distance among the k‑NN results),
+// and the remaining entries in that row are zeroed out.
+
 int main (int argc, char**argv) {
     if (argc < 3) {
 	printf("Usage:\n\nmih <infile> <outfile> [options]\n\n");
@@ -234,6 +240,23 @@ int main (int argc, char**argv) {
     result.vm  /= double(1024*1024);
     result.rss /= double(1024*1024);
     printf("done | cpu %.3fs | wall %.3fs | VM %.1fgb | RSS %.1fgb     \n", result.cput, result.wt, result.vm, result.rss);
+
+    // ----- Efficient Range Search using the MIH structure -----
+    if (doRangeSearch) {
+        printf("Performing efficient range search...\n");
+        for (int i = 0; i < NQ; i++) {
+            // Use the maximum Hamming distance from the kNN search as the range threshold.
+            int threshold = stats[i].maxrho;
+            UINT32 count = MIH->rangequery_single(codes_query + i * dim1queries, threshold, dim1queries);
+            result.nres[i][0] = count;
+            // Optionally, clear out the remainder of the row.
+            for (int d = 1; d <= B; d++) {
+                result.nres[i][d] = 0;
+            }
+        }
+        printf("Efficient range search completed.\n");
+    }
+    // ----- End efficient range search implementation -----
 
     double *pstats_d = result.stats[0];
     for (int i=0; i<NQ; i++) {
