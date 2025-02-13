@@ -244,15 +244,24 @@ int main (int argc, char**argv) {
 
     // ----- Efficient Range Search using the MIH structure -----
     if (doRangeSearch) {
+        // Reallocate memory for the range search results.
+        free(result.nres[0]);
+        free(result.nres);
+        result.nres = (UINT32**) malloc(sizeof(UINT32*)*NQ);
+
         printf("Performing efficient range search...\n");
         for (int i = 0; i < NQ; i++) {
             // Use the maximum Hamming distance from the kNN search as the range threshold.
             int threshold = stats[i].maxrho;
             UINT32 count = MIH->rangequery_single(codes_query + i * dim1queries, threshold, dim1queries);
-            result.nres[i][0] = count;
-            // Optionally, clear out the remainder of the row.
-            for (int d = 1; d <= B; d++) {
-                result.nres[i][d] = 0;
+            
+            // Allocate memory for storing the count in a single entry
+            result.nres[i] = (UINT32 *) malloc(sizeof(UINT32));
+            if (result.nres[i]) {
+                result.nres[i][0] = count;
+            } else {
+                printf("Memory allocation failed for result.nres[%d]\n", i);
+                exit(EXIT_FAILURE);
             }
         }
         printf("Efficient range search completed.\n");
@@ -292,8 +301,11 @@ int main (int argc, char**argv) {
     free(codes_db);
     free(result.res[0]);
     free(result.res);
-    free(result.nres[0]);
-    free(result.nres);
-
+    if (doRangeSearch){
+        free(result.nres);
+    }else{
+        free(result.nres[0]);
+        free(result.nres);
+    }
     return 0;
 }
