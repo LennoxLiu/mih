@@ -70,7 +70,8 @@ class mihasher {
     void populate(UINT8 *codes, UINT32 N, int dim1codes);
 
     void batchquery (UINT32 *results, UINT32 *numres, qstat *stats, UINT8 * q, UINT32 numq, int dim1queries);
-   	
+    
+    UINT32 rangequery_single(UINT8 *query, int range_threshold, int dim1query);
  private:
     void query(UINT32 *results, UINT32* numres, qstat *stats, UINT8 *q, UINT64 * chunks, UINT32 * res);
 };
