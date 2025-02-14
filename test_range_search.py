@@ -5,11 +5,11 @@ import os
 from scipy.spatial.distance import hamming
 
 # Parameters
-N = 10000      # Number of dataset binary codes
+N = 1000      # Number of dataset binary codes
 NQ = 100       # Number of query points
-B = 64        # Number of bits per code
-K = 5         # Number of nearest neighbors
-m = 4         # Number of hash tables for MIH
+B = 128        # Number of bits per code
+K = 6         # Number of nearest neighbors
+m = 8         # Number of hash tables for MIH
 
 # Generate random binary dataset and queries
 dataset = np.random.randint(0, 2, (N, B), dtype=np.uint8)
