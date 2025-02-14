@@ -4,10 +4,14 @@
 #define TYPES_H__
 
 // Types
+#ifndef _WIN32
 typedef unsigned long UINT64;
 typedef unsigned int UINT32;
 typedef unsigned short UINT16;
 typedef unsigned char UINT8;
+#else
+#include <basetsd.h>  // Ensures MinGW's definition is used
+#endif
 
 typedef double REAL;
 

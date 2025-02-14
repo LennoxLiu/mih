@@ -1,13 +1,22 @@
 #ifndef __MIHASHER_H
 #define __MIHASHER_H
 
+#ifdef _WIN32
+#include <io.h>     // For _chsize_s and access()
+#include <windows.h>
+#include <direct.h> // Needed for Windows file operations
+#define ftruncate(fd, length) _chsize_s(fd, length)
+#define access _access
+#define F_OK 0
+#else
+#include <unistd.h>
+#endif
+
 #include <stdio.h>
 #include <pthread.h>
 #include <math.h>
 #include <string.h>
-#include <unistd.h>
 #include <time.h>
-
 #include "types.h"
 #include "bitops.h"
 
