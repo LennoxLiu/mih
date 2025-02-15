@@ -105,7 +105,7 @@ if mih_success:
                 knn_indices = set(np.argsort(dists)[:K])
                 knn_results.append(knn_indices)
                 max_hamming = max(dists[list(knn_indices)])
-                range_count = np.sum(dists <= max_hamming)
+                range_count = np.sum(dists < max_hamming) # in KSG estimator we count he points within the distance
                 range_counts.append(range_count)
             return knn_results, np.array(range_counts)
 
