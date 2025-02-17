@@ -1,20 +1,11 @@
-#ifdef _WIN32
-#include <io.h>  
-#include <direct.h>  // Required for _access()
-#include <cstdio>    // For standard I/O functions
-
-// Explicitly declare `_access()` in case it's missing
-extern "C" int _access(const char *, int);
-#define access _access
-#define F_OK 0
-#endif
-
 #include "myhdf5.h"
 #include <hdf5.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+
+#include <unistd.h>
 
 #include "mihasher.h"
 #include "result.h"
@@ -23,7 +14,7 @@ extern "C" int _access(const char *, int);
 #include "io.h"
 
 void saveVarRef(hobj_ref_t *ref, hid_t file, int i, int dim1, int dim2, const char *varStrMain, const char *varStr, void *var, const char *type) {
-    hsize_t dims[2] = {static_cast<hsize_t>(dim1), static_cast<hsize_t>(dim2)};
+    hsize_t dims[2] = {dim1, dim2};
     hid_t  space = H5Screate_simple(2, dims, NULL);
     herr_t status;
     char str[80];
@@ -122,7 +113,7 @@ void saveRes(const char *filename, const char *varStr, const result_t *result, i
 	assert(ndims == 1);
 	int nold = (int)dims1[0];
 
-	hsize_t dims1extend[1] = {static_cast<hsize_t>(n)};
+	hsize_t dims1extend[1] = {n};
 	hsize_t dims1new[1] = {(dims1[0]+dims1extend[0])};
 
 	status = H5Dextend (dset, dims1new);

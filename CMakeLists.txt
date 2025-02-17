@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 project (mih)
 
-find_library (HDF5_LIB hdf5)
-#find_library(HDF5_LIB hdf5 PATHS /usr/lib/x86_64-linux-gnu/hdf5/serial NO_DEFAULT_PATH)
+#find_library (HDF5_LIB hdf5)
+find_library(HDF5_LIB hdf5 PATHS /usr/lib/x86_64-linux-gnu/hdf5/serial NO_DEFAULT_PATH)
 
 set (CMAKE_CXX_FLAGS "-DSINGLE_CORE -O2 -fopenmp -DNDEBUG")
 # -Wall -march=native -mtune=native")

@@ -1,15 +1,7 @@
 #ifndef MEMUSAGE_H__
 #define MEMUSAGE_H__
 
-#ifdef _WIN32
-#include <io.h>
-#define access _access
-#define F_OK 0
-#include <windows.h>  // Required for SYSTEM_INFO, DWORD, etc.
-#else
 #include <unistd.h>
-#endif
-
 #include <ios>
 #include <iostream>
 #include <fstream>
@@ -48,15 +40,7 @@ void process_mem_usage(double *vm_usage, double *resident_set)
 
    stat_stream.close();
 
-   #ifdef _WIN32
-   long page_size_kb;
-   SYSTEM_INFO sysInfo;
-   GetSystemInfo(&sysInfo);
-   page_size_kb = sysInfo.dwPageSize / 1024;
-   #else
    long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
-   #endif
-
    *vm_usage     = vsize / 1024.0;
    *resident_set = rss * page_size_kb;
 }
