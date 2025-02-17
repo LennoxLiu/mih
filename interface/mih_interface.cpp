@@ -222,8 +222,8 @@ int main (int argc, char**argv) {
     
     printf("done. | cpu %.0fm%.0fs | wall %.0fm%.0fs\n", ct/60, ct-60*int(ct/60), wt/60, wt-60*int(wt/60));
 
-    // kNN search
     if (!doRangeSearch){
+        // Do kNN search
         MIH->setK(K);
 
         printf("query... ");
@@ -244,9 +244,8 @@ int main (int argc, char**argv) {
         result.rss /= double(1024*1024);
         printf("done | cpu %.3fs | wall %.3fs | VM %.1fgb | RSS %.1fgb     \n", result.cput, result.wt, result.vm, result.rss);
     }
-    else
-    // ----- Efficient Range Search using the MIH structure -----
-    if(doRangeSearch) {
+    else{ 
+        // ----- Efficient Range Search using the MIH structure -----
         printf("Performing efficient range search...\n");
         for (int i = 0; i < NQ; i++) {
             // Use the maximum Hamming distance from the kNN search as the range threshold.
@@ -259,8 +258,8 @@ int main (int argc, char**argv) {
             }
         }
         printf("Efficient range search completed.\n");
+        // ----- End efficient range search implementation -----
     }
-    // ----- End efficient range search implementation -----
 
     double *pstats_d = result.stats[0];
     for (int i=0; i<NQ; i++) {

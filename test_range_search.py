@@ -1,4 +1,4 @@
-import subprocess
+import subprocess 
 import numpy as np
 import h5py
 import os
@@ -6,10 +6,11 @@ from scipy.spatial.distance import hamming
 
 # Parameters
 N = 1000      # Number of dataset binary codes
-NQ = 100       # Number of query points
-B = 128        # Number of bits per code
+NQ = 100      # Number of query points
+B = 128       # Number of bits per code
 K = 6         # Number of nearest neighbors
 m = 8         # Number of hash tables for MIH
+range_threshold = 64  # Fixed range threshold for range search
 
 # Generate random binary dataset and queries
 dataset = np.random.randint(0, 2, (N, B), dtype=np.uint8)
@@ -32,7 +33,7 @@ exe_path = os.path.join(os.getcwd(), "build", "mih.exe")
 dataset_path = os.path.join(os.getcwd(), dataset_file)
 output_path = os.path.join(os.getcwd(), mih_output_file)
 
-# Construct command as a list (avoiding PowerShell parsing issues)
+# Construct command as a list (now passing the range threshold after "-r")
 mih_command = [
     exe_path,
     dataset_path,
@@ -42,7 +43,7 @@ mih_command = [
     "-m", str(m),
     "-Q", str(NQ),
     "-K", str(K),
-    "-r"
+    "-r", str(range_threshold)
 ]
 
 # Print for debugging
@@ -56,63 +57,75 @@ mih_success = exit_code == 0
 
 
 def load_mih_results(output_file):
+    """
+    Load MIH results from the output HDF5 file.
+    This function expects two datasets under the 'refs' group:
+      - '<prefix>.res' : k-NN results (each row is a list of dataset indices)
+      - '<prefix>.nres': range search results (each row is a list of indices within the given range)
+    If a row in the range search result is padded (e.g. with -1), these entries are removed.
+    """
     with h5py.File(output_file, "r") as f:
-        # print("Available keys in HDF5 file:", list(f.keys()))  # Debugging
-        
         if "refs" not in f:
             raise KeyError("No 'refs' key found in HDF5 file.")
         
-        # print("Available datasets in /refs/:", list(f["refs"].keys()))  # Debugging
-        
-        mih_keys = [key for key in f["refs"].keys() if key.startswith("mih") and key[3:].split('.')[0].isdigit()]
+        # Find MIH keys (assumes keys like 'mih0.res', 'mih0.nres', etc.)
+        mih_keys = [key for key in f["refs"].keys() 
+                    if key.startswith("mih") and key[3:].split('.')[0].isdigit()]
         if not mih_keys:
             raise KeyError("No valid MIH result keys found in HDF5 file.")
         
-        # Select the highest indexed MIH result (most recent one)
+        # Select the MIH result with the highest index
         mih_index = max(int(k[3:].split('.')[0]) for k in mih_keys)
         mih_prefix = f"mih{mih_index}"
         
-        # print(f"Selected MIH prefix: {mih_prefix}")  # Debugging
-        
-        # Correct dataset paths
         res_key = f"{mih_prefix}.res"
         nres_key = f"{mih_prefix}.nres"
-
-        # print(f"Checking for datasets: {res_key} and {nres_key}")  # Debugging
         
         if res_key not in f["refs"] or nres_key not in f["refs"]:
             raise KeyError(f"Expected datasets not found: {res_key} or {nres_key}")
         
-        knn_results = [set(np.asarray(row, dtype=np.int64) - 1) for row in f["refs"][res_key][()]]
-        range_counts = np.asarray(f["refs"][nres_key][()], dtype=np.int64)[:, 0]
-
-
-
-    return knn_results, range_counts
-
+        # Load k-NN results (adjusting indices if necessary)
+        knn_results = [set(np.asarray(row, dtype=np.int64) - 1) 
+                       for row in f["refs"][res_key][()]]
+        
+        # Load range search results as sets (remove any padding, e.g. -1)
+        range_results = []
+        for row in f["refs"][nres_key][()]:
+            row_array = np.asarray(row, dtype=np.int64)
+            valid = row_array[row_array != -1]  # Remove padding if used
+            range_results.append(set(valid))
+            
+    return knn_results, range_results
 
 
 if mih_success:
     try:
         knn_mih, range_mih = load_mih_results(mih_output_file)
         
-        # Compute k-NN and range search using SciPy
-        def compute_knn_and_range(dataset, queries, K):
+        # Compute k-NN using SciPy (unchanged)
+        def compute_knn(dataset, queries, K):
             knn_results = []
-            range_counts = []
             for q in queries:
-                dists = np.array([hamming(q, d) * B for d in dataset])  # Scale to bit count
+                dists = np.array([hamming(q, d) * B for d in dataset])
                 knn_indices = set(np.argsort(dists)[:K])
                 knn_results.append(knn_indices)
-                max_hamming = max(dists[list(knn_indices)])
-                range_count = np.sum(dists < max_hamming) # in KSG estimator we count he points within the distance
-                range_counts.append(range_count)
-            return knn_results, np.array(range_counts)
+            return knn_results
+        
+        knn_scipy = compute_knn(dataset, queries, K)
+        
+        # Compute range search using the given fixed range threshold
+        def compute_range_search(dataset, queries, r):
+            range_results = []
+            for q in queries:
+                dists = np.array([hamming(q, d) * B for d in dataset])
+                indices = set(np.where(dists < r)[0])
+                range_results.append(indices)
+            return range_results
 
-        knn_scipy, range_scipy = compute_knn_and_range(dataset, queries, K)
+        range_scipy = compute_range_search(dataset, queries, range_threshold)
 
         knn_match = all(knn_mih[i] == knn_scipy[i] for i in range(NQ))
-        range_match = np.all(range_mih == range_scipy)
+        range_match = all(range_mih[i] == range_scipy[i] for i in range(NQ))
 
         print(f"k-NN results match: {knn_match}")
         print(f"Range search results match: {range_match}")
@@ -124,8 +137,8 @@ if mih_success:
 
         if not range_match:
             print("Differences in range search results!")
-            print("MIH results:", range_mih[:5])
-            print("SciPy results:", range_scipy[:5])
+            print("MIH results:", list(range_mih[:5]))
+            print("SciPy results:", list(range_scipy[:5]))
 
     except KeyError as e:
         print(f"Error loading MIH results: {e}")
