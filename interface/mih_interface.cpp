@@ -178,18 +178,10 @@ int main (int argc, char**argv) {
     for (size_t i=1; i<NQ; i++)
 	result.res[i] = result.res[i-1] + K;
 
-    if(! doRangeSearch){
-        result.nres = (UINT32 **) malloc(sizeof(UINT32*)*NQ);
-        result.nres[0] = (UINT32 *) malloc(sizeof(UINT32)*(B+1)*NQ);
-        for (size_t i=1; i<NQ; i++)
-        result.nres[i] = result.nres[i-1] + (B+1);
-    }
-    else{
-        result.nres = (UINT32 **) malloc(sizeof(UINT32*)*NQ);
-        result.nres[0] = (UINT32 *) malloc(sizeof(UINT32)*NQ);
-        for (size_t i=1; i<NQ; i++)
-        result.nres[i] = result.nres[i-1] + 1;
-    }
+    result.nres = (UINT32 **) malloc(sizeof(UINT32*)*NQ);
+    result.nres[0] = (UINT32 *) malloc(sizeof(UINT32)*(B+1)*NQ);
+    for (size_t i=1; i<NQ; i++)
+    result.nres[i] = result.nres[i-1] + (B+1);
 
     result.stats = (double **) malloc(sizeof(double*)*NQ);
     result.stats[0] = (double *) malloc(sizeof(double)*STAT_DIM*NQ);
@@ -264,7 +256,10 @@ int main (int argc, char**argv) {
 
         for (int i = 0; i < NQ; i++) {
             UINT32 count = MIH->rangequery_single(codes_query + i * dim1queries, range, dim1queries);
-            result.nres[0][i] = count;
+            result.nres[i][0] = count;
+            for (int j = 1; j <= B; j++) {
+                result.nres[i][j] = 0;
+            }
             printf("Query %d: %d\n", i, count);
         }
 
