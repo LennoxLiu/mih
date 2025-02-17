@@ -30,7 +30,7 @@ with h5py.File(dataset_file, "w") as f:
     f.create_dataset("Q", data=queries_packed)
 
 # Define full paths for the MIH executable and dataset file.
-exe_path = os.path.join(os.getcwd(), "build", "mih")
+exe_path = os.path.join(os.getcwd(), "build", "mih.exe")
 dataset_path = os.path.join(os.getcwd(), dataset_file)
 
 # Construct the MIH command for k‑NN search (without -r)
