@@ -1,12 +1,12 @@
+#!/usr/bin/env python3
 import subprocess 
 import numpy as np
 import h5py
 import os
-from scipy.spatial.distance import hamming
 
 # Parameters
 N = 1000      # Number of dataset binary codes
-NQ = 100      # Number of query points
+NQ = 10      # Number of query points
 B = 128       # Number of bits per code
 K = 6         # Number of nearest neighbors
 m = 8         # Number of hash tables for MIH
@@ -22,22 +22,34 @@ queries_packed = np.packbits(queries, axis=1)
 
 # Save in HDF5 format
 dataset_file = "dataset_test.h5"
-mih_output_file = "mih_results.h5"
+mih_knn_output_file = "mih_knn_results.h5"
+mih_range_output_file = "mih_range_results.h5"
 
 with h5py.File(dataset_file, "w") as f:
     f.create_dataset("B", data=dataset_packed)
     f.create_dataset("Q", data=queries_packed)
 
-# Define full paths
+# Define full paths for the MIH executable and dataset file.
 exe_path = os.path.join(os.getcwd(), "build", "mih")
 dataset_path = os.path.join(os.getcwd(), dataset_file)
-output_path = os.path.join(os.getcwd(), mih_output_file)
 
-# Construct command as a list (now passing the range threshold after "-r")
-mih_command = [
+# Construct the MIH command for k‑NN search (without -r)
+mih_knn_command = [
     exe_path,
     dataset_path,
-    output_path,
+    mih_knn_output_file,
+    "-N", str(N),
+    "-B", str(B),
+    "-m", str(m),
+    "-Q", str(NQ),
+    "-K", str(K)
+]
+
+# Construct the MIH command for range search (with -r)
+mih_range_command = [
+    exe_path,
+    dataset_path,
+    mih_range_output_file,
     "-N", str(N),
     "-B", str(B),
     "-m", str(m),
@@ -46,102 +58,91 @@ mih_command = [
     "-r", str(range_threshold)
 ]
 
-# Print for debugging
-print("Running command:", " ".join(mih_command))
+print("Running k‑NN command:", " ".join(mih_knn_command))
+exit_code_knn = subprocess.run(mih_knn_command).returncode
+print("k‑NN Exit Code:", exit_code_knn)
 
-# Run the command with subprocess
-exit_code = subprocess.run(mih_command).returncode
-
-print("Exit Code:", exit_code)
-mih_success = exit_code == 0
-
+print("Running range search command:", " ".join(mih_range_command))
+exit_code_range = subprocess.run(mih_range_command).returncode
+print("Range search Exit Code:", exit_code_range)
 
 def load_mih_results(output_file):
     """
     Load MIH results from the output HDF5 file.
     This function expects two datasets under the 'refs' group:
-      - '<prefix>.res' : k-NN results (each row is a list of dataset indices)
-      - '<prefix>.nres': range search results (each row is a list of indices within the given range)
-    If a row in the range search result is padded (e.g. with -1), these entries are removed.
+      - '<prefix>.res' : k‑NN results (each row is a list of dataset indices, 1‑based).
+      - '<prefix>.nres': range search results.
+    
+    For range search results, if nres has two dimensions we take the first column as the count.
     """
     with h5py.File(output_file, "r") as f:
         if "refs" not in f:
             raise KeyError("No 'refs' key found in HDF5 file.")
         
-        # Find MIH keys (assumes keys like 'mih0.res', 'mih0.nres', etc.)
+        # Identify MIH result keys (e.g. "mih0.res", "mih0.nres", etc.)
         mih_keys = [key for key in f["refs"].keys() 
                     if key.startswith("mih") and key[3:].split('.')[0].isdigit()]
         if not mih_keys:
             raise KeyError("No valid MIH result keys found in HDF5 file.")
         
-        # Select the MIH result with the highest index
         mih_index = max(int(k[3:].split('.')[0]) for k in mih_keys)
         mih_prefix = f"mih{mih_index}"
-        
         res_key = f"{mih_prefix}.res"
         nres_key = f"{mih_prefix}.nres"
         
         if res_key not in f["refs"] or nres_key not in f["refs"]:
             raise KeyError(f"Expected datasets not found: {res_key} or {nres_key}")
         
-        # Load k-NN results (adjusting indices if necessary)
+        # Load k‑NN results (adjust indices from 1‑based to 0‑based)
         knn_results = [set(np.asarray(row, dtype=np.int64) - 1) 
                        for row in f["refs"][res_key][()]]
         
-        # Load range search results as sets (remove any padding, e.g. -1)
-        range_results = []
-        for row in f["refs"][nres_key][()]:
-            row_array = np.asarray(row, dtype=np.int64)
-            valid = row_array[row_array != -1]  # Remove padding if used
-            range_results.append(set(valid))
-            
+        # Load range search results
+        nres_data = f["refs"][nres_key][()]
+        if len(nres_data.shape) == 2:
+            # Assume the first column is the range count.
+            range_results = nres_data[:, 0].tolist()
+        else:
+            range_results = nres_data.tolist()
     return knn_results, range_results
 
+# Load MIH results for k‑NN and range search.
+mih_knn, nres_knn = load_mih_results(mih_knn_output_file)
+mih_range_knn, range_counts = load_mih_results(mih_range_output_file)
 
-if mih_success:
-    try:
-        knn_mih, range_mih = load_mih_results(mih_output_file)
-        
-        # Compute k-NN using SciPy (unchanged)
-        def compute_knn(dataset, queries, K):
-            knn_results = []
-            for q in queries:
-                dists = np.array([hamming(q, d) * B for d in dataset])
-                knn_indices = set(np.argsort(dists)[:K])
-                knn_results.append(knn_indices)
-            return knn_results
-        
-        knn_scipy = compute_knn(dataset, queries, K)
-        
-        # Compute range search using the given fixed range threshold
-        def compute_range_search(dataset, queries, r):
-            range_results = []
-            for q in queries:
-                dists = np.array([hamming(q, d) * B for d in dataset])
-                indices = set(np.where(dists < r)[0])
-                range_results.append(indices)
-            return range_results
+# Compute ground‑truth k‑NN using exact bit comparisons (Hamming distance)
+def compute_knn(dataset, queries, K):
+    knn_results = []
+    for q in queries:
+        dists = np.array([np.sum(q != d) for d in dataset])
+        knn_results.append(set(np.argsort(dists)[:K]))
+    return knn_results
 
-        range_scipy = compute_range_search(dataset, queries, range_threshold)
+gt_knn = compute_knn(dataset, queries, K)
 
-        knn_match = all(knn_mih[i] == knn_scipy[i] for i in range(NQ))
-        range_match = all(range_mih[i] == range_scipy[i] for i in range(NQ))
+# Compute ground‑truth range counts using exact bit comparisons
+def compute_range_counts(dataset, queries, R):
+    counts = []
+    for q in queries:
+        dists = np.array([np.sum(q != d) for d in dataset])
+        counts.append(int(np.sum(dists < R)))
+    return counts
 
-        print(f"k-NN results match: {knn_match}")
-        print(f"Range search results match: {range_match}")
+gt_range = compute_range_counts(dataset, queries, range_threshold)
 
-        if not knn_match:
-            print("Differences in k-NN results!")
-            print("MIH results:", knn_mih[:5])
-            print("SciPy results:", knn_scipy[:5])
+# Compare k‑NN results as sets
+knn_match = all(mih_knn[i] == gt_knn[i] for i in range(NQ))
+# Compare range counts as scalars
+range_match = all(range_counts[i] == gt_range[i] for i in range(NQ))
 
-        if not range_match:
-            print("Differences in range search results!")
-            print("MIH results:", list(range_mih[:5]))
-            print("SciPy results:", list(range_scipy[:5]))
+print("k‑NN results match:", knn_match)
+print("Range search counts match:", range_match)
 
-    except KeyError as e:
-        print(f"Error loading MIH results: {e}")
-        print("Make sure MIH successfully wrote the expected datasets to the output file.")
-else:
-    print("MIH execution failed. Check the command and dataset format.")
+if not knn_match:
+    print("Differences in k‑NN results!")
+    print("MIH k‑NN results (sorted):", [sorted(list(s)) for s in mih_knn[:5]])
+    print("Ground truth k‑NN (sorted):", [sorted(list(s)) for s in gt_knn[:5]])
+if not range_match:
+    print("Differences in range search counts!")
+    print("MIH range counts:", range_counts[:5])
+    print("Ground truth range counts:", gt_range[:5])

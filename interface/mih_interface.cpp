@@ -148,6 +148,7 @@ int main (int argc, char**argv) {
     printf(" m = %2d |", m);
     printf(" R = %d |", (int)R);
     printf("doRangeSearch = %d", (int)doRangeSearch);
+    printf(" range = %d", range);
     printf("\n");
 
     /* Run multi-index hashing for K-nearest neighbor search and store the required stats */
@@ -184,10 +185,10 @@ int main (int argc, char**argv) {
         result.nres[i] = result.nres[i-1] + (B+1);
     }
     else{
-        result.nres = (UINT32 **) malloc(sizeof(UINT32*)*NQ);   
-        for (size_t i = 0; i < NQ; i++)
-            // Allocate memory for storing the count in a single entry
-            result.nres[i] = (UINT32 *) malloc(sizeof(UINT32));
+        result.nres = (UINT32 **) malloc(sizeof(UINT32*)*NQ);
+        result.nres[0] = (UINT32 *) malloc(sizeof(UINT32)*NQ);
+        for (size_t i=1; i<NQ; i++)
+        result.nres[i] = result.nres[i-1] + 1;
     }
 
     result.stats = (double **) malloc(sizeof(double*)*NQ);
@@ -262,10 +263,9 @@ int main (int argc, char**argv) {
         start0 = clock();
 
         for (int i = 0; i < NQ; i++) {
-            // Use the maximum Hamming distance from the kNN search as the range threshold.
-            int threshold = stats[i].maxrho;
-            UINT32 count = MIH->rangequery_single(codes_query + i * dim1queries, threshold, dim1queries);
-            result.nres[i][0] = count;
+            UINT32 count = MIH->rangequery_single(codes_query + i * dim1queries, range, dim1queries);
+            result.nres[0][i] = count;
+            printf("Query %d: %d\n", i, count);
         }
 
         end0 = clock();
@@ -314,15 +314,9 @@ int main (int argc, char**argv) {
     free(codes_db);
     free(result.res[0]);
     free(result.res);
-    if (doRangeSearch) {
-        for (size_t i = 0; i < NQ; i++) {
-            free(result.nres[i]);
-        }
-        free(result.nres);
-    } else {
-        free(result.nres[0]);
-        free(result.nres);
-    }
+    free(result.nres[0]);
+    free(result.nres);
+    
     
     return 0;
 }
