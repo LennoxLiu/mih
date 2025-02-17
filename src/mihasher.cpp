@@ -330,7 +330,7 @@ UINT32 mihasher::rangequery_single(UINT8 *query, int range_threshold, int dim1qu
                             if (!rCounter->get(index)) {
                                 rCounter->set(index);
                                 int hammd = match(codes + (UINT64)index * (B_over_8), query, B_over_8);
-                                if (hammd <= range_threshold) {
+                                if (hammd < range_threshold) {
                                     count++;
                                 }
                             }

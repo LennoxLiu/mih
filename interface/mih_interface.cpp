@@ -29,9 +29,7 @@ int main (int argc, char**argv) {
 	printf(" -m <number>          Set the number of chunks to use, default 1\n");
 	printf(" -K <number>          Set number of nearest neighbors to be retrieved\n");
 	printf(" -R <number>          Set the number of codes (in Millions) to use in computing the optimal bit reordering, default OFF (0)\n");
-	printf(" -r                   Perform a range seach after the kNN search,"
-        " set the search range as the largest distance to all k nearest neighbors for each query "
-        "and return the counts of neighbors within in the range\n");
+	printf(" -r <number>          Perform a range seach with given range(int) and return the counts of neighbors within in the range\n");
     printf("\n");
 	return 0;
     }
@@ -47,6 +45,7 @@ int main (int argc, char**argv) {
     size_t R = 0;
 
     bool doRangeSearch = false;
+    UINT32 range = 0;
 	
     for (int argnum = 3; argnum < argc; argnum++) {
 	if (argv[argnum][0] == '-') {
@@ -81,6 +80,7 @@ int main (int argc, char**argv) {
 		break;
         case 'r':
         doRangeSearch = true;
+        range = atoi(argv[++argnum]);   
         break;
 	    default: 
 		printf("Unrecognized Option or Missing Parameter when parsing: %s\n", argv[argnum]);
@@ -222,51 +222,44 @@ int main (int argc, char**argv) {
     
     printf("done. | cpu %.0fm%.0fs | wall %.0fm%.0fs\n", ct/60, ct-60*int(ct/60), wt/60, wt-60*int(wt/60));
 
-    MIH->setK(K);
+    if (!doRangeSearch){
+        // Do kNN search
+        MIH->setK(K);
 
-    printf("query... ");
-    fflush (stdout);
-    
-    start1 = time(NULL);
-    start0 = clock();
-    
-    MIH->batchquery(result.res[0], result.nres[0], stats, codes_query, NQ, dim1queries);
-    
-    end0 = clock();
-    end1 = time(NULL);
-    
-    result.cput = (double)(end0-start0) / (CLOCKS_PER_SEC) / NQ;
-    result.wt = (double)(end1-start1) / NQ;
-    process_mem_usage(&result.vm, &result.rss);
-    result.vm  /= double(1024*1024);
-    result.rss /= double(1024*1024);
-    printf("done | cpu %.3fs | wall %.3fs | VM %.1fgb | RSS %.1fgb     \n", result.cput, result.wt, result.vm, result.rss);
-
-    // ----- Efficient Range Search using the MIH structure -----
-    if (doRangeSearch) {
-        // Reallocate memory for the range search results.
-        free(result.nres[0]);
-        free(result.nres);
-        result.nres = (UINT32**) malloc(sizeof(UINT32*)*NQ);
-
+        printf("query... ");
+        fflush (stdout);
+        
+        start1 = time(NULL);
+        start0 = clock();
+        
+        MIH->batchquery(result.res[0], result.nres[0], stats, codes_query, NQ, dim1queries);
+        
+        end0 = clock();
+        end1 = time(NULL);
+        
+        result.cput = (double)(end0-start0) / (CLOCKS_PER_SEC) / NQ;
+        result.wt = (double)(end1-start1) / NQ;
+        process_mem_usage(&result.vm, &result.rss);
+        result.vm  /= double(1024*1024);
+        result.rss /= double(1024*1024);
+        printf("done | cpu %.3fs | wall %.3fs | VM %.1fgb | RSS %.1fgb     \n", result.cput, result.wt, result.vm, result.rss);
+    }
+    else{ 
+        // ----- Efficient Range Search using the MIH structure -----
         printf("Performing efficient range search...\n");
         for (int i = 0; i < NQ; i++) {
             // Use the maximum Hamming distance from the kNN search as the range threshold.
             int threshold = stats[i].maxrho;
             UINT32 count = MIH->rangequery_single(codes_query + i * dim1queries, threshold, dim1queries);
-            
-            // Allocate memory for storing the count in a single entry
-            result.nres[i] = (UINT32 *) malloc(sizeof(UINT32));
-            if (result.nres[i]) {
-                result.nres[i][0] = count;
-            } else {
-                printf("Memory allocation failed for result.nres[%d]\n", i);
-                exit(EXIT_FAILURE);
+            result.nres[i][0] = count;
+            // Optionally, clear out the remainder of the row.
+            for (int d = 1; d <= B; d++) {
+                result.nres[i][d] = 0;
             }
         }
         printf("Efficient range search completed.\n");
+        // ----- End efficient range search implementation -----
     }
-    // ----- End efficient range search implementation -----
 
     double *pstats_d = result.stats[0];
     for (int i=0; i<NQ; i++) {
@@ -301,11 +294,8 @@ int main (int argc, char**argv) {
     free(codes_db);
     free(result.res[0]);
     free(result.res);
-    if (doRangeSearch){
-        free(result.nres);
-    }else{
-        free(result.nres[0]);
-        free(result.nres);
-    }
+    free(result.nres[0]);
+    free(result.nres);
+
     return 0;
 }
