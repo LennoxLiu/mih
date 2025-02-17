@@ -29,9 +29,7 @@ int main (int argc, char**argv) {
 	printf(" -m <number>          Set the number of chunks to use, default 1\n");
 	printf(" -K <number>          Set number of nearest neighbors to be retrieved\n");
 	printf(" -R <number>          Set the number of codes (in Millions) to use in computing the optimal bit reordering, default OFF (0)\n");
-	printf(" -r                   Perform a range seach after the kNN search,"
-        " set the search range as the largest distance to all k nearest neighbors for each query "
-        "and return the counts of neighbors within in the range\n");
+	printf(" -r <number>          Perform a range seach after the kNN search with given distance and return the counts of neighbors within in the range\n");
     printf("\n");
 	return 0;
     }
@@ -45,7 +43,7 @@ int main (int argc, char**argv) {
     int m = 1;
     UINT32 K = -1;
     size_t R = 0;
-
+    UINT32 range = 0;
     bool doRangeSearch = false;
 	
     for (int argnum = 3; argnum < argc; argnum++) {
@@ -79,8 +77,10 @@ int main (int argc, char**argv) {
 	    case 'R':
 		R = atoi(argv[++argnum])*1000000;
 		break;
-        case 'r':
-        doRangeSearch = true;
+        case 'r':{
+            doRangeSearch = true;
+            range = atoi(argv[++argnum]);
+        }
         break;
 	    default: 
 		printf("Unrecognized Option or Missing Parameter when parsing: %s\n", argv[argnum]);
@@ -146,7 +146,7 @@ int main (int argc, char**argv) {
     printf(" B = %d |", B);
     printf(" K = %4d |", K);
     printf(" m = %2d |", m);
-    printf(" R = %d", (int)R);
+    printf(" R = %d |", (int)R);
     printf("doRangeSearch = %d", (int)doRangeSearch);
     printf("\n");
 
@@ -182,10 +182,10 @@ int main (int argc, char**argv) {
         result.nres[0] = (UINT32 *) malloc(sizeof(UINT32)*(B+1)*NQ);
         for (size_t i=1; i<NQ; i++)
         result.nres[i] = result.nres[i-1] + (B+1);
-        }
+    }
     else{
         result.nres = (UINT32 **) malloc(sizeof(UINT32*)*NQ);   
-        for (size_t i=1; i<NQ; i++)
+        for (size_t i = 0; i < NQ; i++)
             // Allocate memory for storing the count in a single entry
             result.nres[i] = (UINT32 *) malloc(sizeof(UINT32));
     }
@@ -230,9 +230,10 @@ int main (int argc, char**argv) {
     
     printf("done. | cpu %.0fm%.0fs | wall %.0fm%.0fs\n", ct/60, ct-60*int(ct/60), wt/60, wt-60*int(wt/60));
 
+    MIH->setK(K);
+
     if(! doRangeSearch){
         printf("Running kNN search... ");
-        MIH->setK(K);
 
         printf("query... ");
         fflush (stdout);
@@ -255,19 +256,28 @@ int main (int argc, char**argv) {
     else{
         // ----- Efficient Range Search using the MIH structure -----
         printf("Performing efficient range search...\n");
+        fflush (stdout);
+
+        start1 = time(NULL);
+        start0 = clock();
+
         for (int i = 0; i < NQ; i++) {
             // Use the maximum Hamming distance from the kNN search as the range threshold.
             int threshold = stats[i].maxrho;
             UINT32 count = MIH->rangequery_single(codes_query + i * dim1queries, threshold, dim1queries);
-            
-            if (result.nres[i]) {
-                result.nres[i][0] = count;
-            } else {
-                printf("Memory allocation failed for result.nres[%d]\n", i);
-                exit(EXIT_FAILURE);
-            }
+            result.nres[i][0] = count;
         }
-        printf("Efficient range search completed.\n");
+
+        end0 = clock();
+        end1 = time(NULL);
+
+        result.cput = (double)(end0-start0) / (CLOCKS_PER_SEC) / NQ;
+        result.wt = (double)(end1-start1) / NQ;
+        process_mem_usage(&result.vm, &result.rss);
+        result.vm  /= double(1024*1024);
+        result.rss /= double(1024*1024);
+        printf("done | cpu %.3fs | wall %.3fs | VM %.1fgb | RSS %.1fgb     \n", result.cput, result.wt, result.vm, result.rss);
+    
         // ----- End efficient range search implementation -----
     }
 
@@ -304,11 +314,15 @@ int main (int argc, char**argv) {
     free(codes_db);
     free(result.res[0]);
     free(result.res);
-    if (doRangeSearch){
+    if (doRangeSearch) {
+        for (size_t i = 0; i < NQ; i++) {
+            free(result.nres[i]);
+        }
         free(result.nres);
-    }else{
+    } else {
         free(result.nres[0]);
         free(result.nres);
     }
+    
     return 0;
 }
