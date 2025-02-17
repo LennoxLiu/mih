@@ -260,7 +260,6 @@ int main (int argc, char**argv) {
             for (int j = 1; j <= B; j++) {
                 result.nres[i][j] = 0;
             }
-            printf("Query %d: %d\n", i, count);
         }
 
         end0 = clock();

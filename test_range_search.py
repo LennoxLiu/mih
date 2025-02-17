@@ -5,8 +5,8 @@ import h5py
 import os
 
 # Parameters
-N = 1000      # Number of dataset binary codes
-NQ = 10      # Number of query points
+N = 10000      # Number of dataset binary codes
+NQ = 100      # Number of query points
 B = 128       # Number of bits per code
 K = 6         # Number of nearest neighbors
 m = 8         # Number of hash tables for MIH
