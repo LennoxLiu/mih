@@ -10,7 +10,7 @@ NQ = 100      # Number of query points
 B = 128       # Number of bits per code
 K = 6         # Number of nearest neighbors
 m = 8         # Number of hash tables for MIH
-range_threshold = 64  # Fixed range threshold for range search
+range_threshold = 10  # Fixed range threshold for range search
 
 # Generate random binary dataset and queries
 dataset = np.random.randint(0, 2, (N, B), dtype=np.uint8)
