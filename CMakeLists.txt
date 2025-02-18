@@ -6,7 +6,12 @@ set(BUILD_SHARED_LIBS OFF)
 # Help CMake find static libraries.
 set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ".lib")
 
+# Ensure CMake searches /mingw64/lib for static libs
+list(APPEND CMAKE_LIBRARY_PATH "/mingw64/lib")
+include_directories("/mingw64/include")
+
 find_library(HDF5_LIB hdf5)
+find_library(SZ_LIB NAMES sz)
 
 set(CMAKE_CXX_FLAGS "-DSINGLE_CORE -O2 -fopenmp -DNDEBUG")
 
@@ -25,7 +30,7 @@ add_executable(mih
 )
 
 # Link HDF5 and its static dependencies.
-target_link_libraries(mih ${HDF5_LIB} z sz curl crypto ssl)
+target_link_libraries(mih ${HDF5_LIB} ${SZ_LIB} z sz curl crypto ssl)
 
 project(linscan)
 add_executable(linscan
