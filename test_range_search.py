@@ -58,6 +58,12 @@ mih_range_command = [
     "-r", str(range_threshold)
 ]
 
+# Remove previous output files if they exist
+if os.path.exists(mih_knn_output_file):
+    os.remove(mih_knn_output_file)
+if os.path.exists(mih_range_output_file):
+    os.remove(mih_range_output_file)
+    
 print("Running k‑NN command:", " ".join(mih_knn_command))
 exit_code_knn = subprocess.run(mih_knn_command).returncode
 print("k‑NN Exit Code:", exit_code_knn)
