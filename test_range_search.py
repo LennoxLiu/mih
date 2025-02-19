@@ -5,11 +5,11 @@ import h5py
 import os
 
 # Parameters
-N = 10000      # Number of dataset binary codes
-NQ = 100      # Number of query points
-B = 128       # Number of bits per code
-K = 6         # Number of nearest neighbors
-m = 8         # Number of hash tables for MIH
+N = 15*60*1000      # Number of dataset binary codes
+NQ = 1000      # Number of query points
+B = 16       # Number of bits per code
+K = 4         # Number of nearest neighbors
+m = 4         # Number of hash tables for MIH
 range_threshold = 10  # Fixed range threshold for range search
 
 # Generate random binary dataset and queries
@@ -131,7 +131,7 @@ def compute_range_counts(dataset, queries, R):
     counts = []
     for q in queries:
         dists = np.array([np.sum(q != d) for d in dataset])
-        counts.append(int(np.sum(dists < R)))
+        counts.append(int(np.sum(dists <= R)))
     return counts
 
 gt_range = compute_range_counts(dataset, queries, range_threshold)
