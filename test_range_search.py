@@ -5,12 +5,13 @@ import h5py
 import os
 
 # Parameters
-N = 15*60*1000      # Number of dataset binary codes
-NQ = 15*60*1000      # Number of query points
+N = 10000     # Number of dataset binary codes
+NQ = 100      # Number of query points
 B = 24       # Number of bits per code
 K = 4         # Number of nearest neighbors
-m = 6         # Number of hash tables for MIH
+m = 3         # Number of hash tables for MIH
 range_threshold = 10  # Fixed range threshold for range search
+# B/m must <=64 and B/m must be a power of 2
 
 # Generate random binary dataset and queries
 dataset = np.random.randint(0, 2, (N, B), dtype=np.uint8)
