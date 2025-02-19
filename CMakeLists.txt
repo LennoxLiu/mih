@@ -1,67 +1,32 @@
 cmake_minimum_required(VERSION 2.6)
-project(mih)
+project (mih)
 
-# Force CMake to prefer static libraries.
-set(BUILD_SHARED_LIBS OFF)
-# Help CMake find static libraries.
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ".lib")
+set (CMAKE_CXX_FLAGS "-O2 -DNDEBUG")
 
-# Ensure CMake searches /mingw64/lib for static libs
-list(APPEND CMAKE_LIBRARY_PATH "/mingw64/lib")
-include_directories("/mingw64/include")
+set (MATLAB_LIB_PATH ${MATLABROOT}/bin/glnxa64)  
 
-find_library(HDF5_LIB hdf5)
-find_library(SZ_LIB NAMES sz)
+FIND_LIBRARY (MATLAB_MAT_LIBRARY mat ${MATLAB_LIB_PATH})  
+FIND_LIBRARY (MATLAB_MX_LIBRARY mx ${MATLAB_LIB_PATH})  
+FIND_LIBRARY (MATLAB_MEX_LIBRARY mex ${MATLAB_LIB_PATH})  
 
-set(CMAKE_CXX_FLAGS "-DSINGLE_CORE -O2 -fopenmp -DNDEBUG ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB")
+# FIND_LIBRARY (MATLAB_MAT_LIBRARY mat)
+# FIND_LIBRARY (MATLAB_MX_LIBRARY mx)
+# FIND_LIBRARY (MATLAB_MEX_LIBRARY mex)
+set (MATLAB_INCLUDE_DIR ${MATLABROOT}/extern/include)
+set (MATLAB_LIBRARIES ${MATLAB_MAT_LIBRARY} ${MATLAB_MX_LIBRARY} ${MATLAB_MEX_LIBRARY} )
+MESSAGE (STATUS ${MATLAB_INCLUDE_DIR})
+MESSAGE (STATUS ${MATLAB_LIBRARIES})
 
+include_directories ("${PROJECT_SOURCE_DIR}/include")
+include_directories (${MATLAB_INCLUDE_DIR})
 
-include_directories("${PROJECT_SOURCE_DIR}/include")
-include_directories(/usr/include/hdf5/serial)
+add_executable (mih src/array32.cpp src/mihasher.cpp src/sparse_hashtable.cpp src/bucket_group.cpp interface/mih_interface.cpp)
 
-add_executable(mih
-    src/array32.cpp
-    src/mihasher.cpp
-    src/sparse_hashtable.cpp
-    src/bucket_group.cpp
-    interface/mih_interface.cpp
-    src/reorder.cpp
-    interface/loadVar.cpp
-    interface/saveRes.cpp
-)
-
-# Link HDF5 and its static dependencies.
-target_link_libraries(mih ${HDF5_LIB} ${SZ_LIB} z sz curl crypto ssl)
-
-project(linscan)
-
-# Force CMake to prefer static libraries.
-set(BUILD_SHARED_LIBS OFF)
-# Help CMake find static libraries.
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a" ".lib")
-
-# Ensure CMake searches /mingw64/lib for static libs
-list(APPEND CMAKE_LIBRARY_PATH "/mingw64/lib")
-include_directories("/mingw64/include")
-
-find_library(HDF5_LIB hdf5)
-find_library(SZ_LIB NAMES sz)
-
-set(CMAKE_CXX_FLAGS "-DSINGLE_CORE -O2 -fopenmp -DNDEBUG ")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCURL_STATICLIB")
+target_link_libraries (mih ${MATLAB_LIBRARIES})
 
 
-include_directories("${PROJECT_SOURCE_DIR}/include")
-include_directories(/usr/include/hdf5/serial)
+project (linscan)
 
+add_executable (linscan src/linscan.cpp interface/linscan_interface.cpp)
 
-add_executable(linscan
-    interface/linscan_interface.cpp
-    src/linscan.cpp
-    interface/loadVar.cpp
-    interface/saveRes.cpp
-)
-
-# Link HDF5 and its static dependencies.
-target_link_libraries(linscan ${HDF5_LIB} ${SZ_LIB} z sz curl crypto ssl)
+target_link_libraries (linscan ${MATLAB_LIBRARIES})

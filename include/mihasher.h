@@ -1,21 +1,11 @@
 #ifndef __MIHASHER_H
 #define __MIHASHER_H
 
-#ifdef _WIN32
-#include <io.h>     // For _chsize_s and access()
-#include <windows.h>
-#include <direct.h> // Needed for Windows file operations
-#define ftruncate(fd, length) _chsize_s(fd, length)
-#define access _access
-#define F_OK 0
-#else
-#include <unistd.h>
-#endif
-
 #include <stdio.h>
 #include <pthread.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 #include <time.h>
 
 #include "types.h"
@@ -24,15 +14,15 @@
 #include "sparse_hashtable.h"
 #include "bitarray.h"
 
-#define STAT_DIM 6		/* Dimensionality of stats, it has STAT_DIM many fields */
-
 struct qstat {
+
     UINT32 numres;		// Total number of returned results
     UINT32 numcand;		// Number of hamming distance computations executed
     UINT32 numdups;		// Number of candidates skipped because they were duplicates
     UINT32 numlookups;
     UINT32 maxrho;		// Largest distance that was searched exhaustively
     clock_t ticks;		// Number of clock ticks spent on each query
+	
 };
 
 class mihasher {

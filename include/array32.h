@@ -25,9 +25,6 @@ class Array32 {
 
     Array32();
 
-    /* initializes to zero too */
-    Array32(int capacity);
-
     ~Array32();
 
     void cleanup();
@@ -47,8 +44,6 @@ class Array32 {
     void print();
 
     void init(int size);
-
-    void expand(int newsize);
 
 };
 
