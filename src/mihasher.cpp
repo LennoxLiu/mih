@@ -1,5 +1,6 @@
 #include <algorithm>
 #include "mihasher.h"
+#include <cassert>
 
 using namespace std;
 
@@ -296,7 +297,8 @@ UINT32 mihasher::rangequery_single(UINT8 *query, int range_threshold, int dim1qu
     // Allocate a local array for enumerating error patterns.
     // We use a size of (b+1) which is safe since for each substring the number of bits is either b or (b-1).
     int power[64];  // assuming b is never greater than 64
-
+    assert(b <= 64);
+    
     // Loop over error levels for each substring.
     // We iterate s from 0 to d (d was set as ceil((double)D/m) in the constructor).
     for (int s = 0; s <= d; s++) {
