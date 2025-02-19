@@ -6,10 +6,10 @@ import os
 
 # Parameters
 N = 15*60*1000      # Number of dataset binary codes
-NQ = 1000      # Number of query points
-B = 16       # Number of bits per code
+NQ = 15*60*1000      # Number of query points
+B = 24       # Number of bits per code
 K = 4         # Number of nearest neighbors
-m = 4         # Number of hash tables for MIH
+m = 6         # Number of hash tables for MIH
 range_threshold = 10  # Fixed range threshold for range search
 
 # Generate random binary dataset and queries
