@@ -5,13 +5,13 @@ import h5py
 import os
 
 # Parameters
-N = 10000     # Number of dataset binary codes
+N = 2000     # Number of dataset binary codes
 NQ = 100      # Number of query points
-B = 24       # Number of bits per code
+B = 16       # Number of bits per code, B/8 to get the number of uint8
 K = 4         # Number of nearest neighbors
-m = 3         # Number of hash tables for MIH
+m = 2         # Number of hash tables for MIH
 range_threshold = 10  # Fixed range threshold for range search
-# B/m must <=64 and B/m must be a power of 2
+# B/m must <=64, B/m > 4 ?
 
 # Generate random binary dataset and queries
 dataset = np.random.randint(0, 2, (N, B), dtype=np.uint8)
@@ -20,6 +20,7 @@ queries = np.random.randint(0, 2, (NQ, B), dtype=np.uint8)
 # Pack bits (store in bytes to match MIH's expected format)
 dataset_packed = np.packbits(dataset, axis=1)
 queries_packed = np.packbits(queries, axis=1)
+print("Dataset shape:", dataset_packed.shape)
 
 # Save in HDF5 format
 dataset_file = "dataset_test.h5"
