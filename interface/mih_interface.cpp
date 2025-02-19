@@ -29,7 +29,7 @@ int main (int argc, char**argv) {
 	printf(" -m <number>          Set the number of chunks to use, default 1\n");
 	printf(" -K <number>          Set number of nearest neighbors to be retrieved\n");
 	printf(" -R <number>          Set the number of codes (in Millions) to use in computing the optimal bit reordering, default OFF (0)\n");
-	printf(" -r <number>          Perform a range seach after the kNN search with given distance and return the counts of neighbors within in the range\n");
+	printf(" -r <number>          Perform a range seach after the kNN search with given distance(int) and return the counts of neighbors within(<=) in the range\n");
     printf("\n");
 	return 0;
     }

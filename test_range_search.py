@@ -5,11 +5,11 @@ import h5py
 import os
 
 # Parameters
-N = 10000      # Number of dataset binary codes
-NQ = 100      # Number of query points
-B = 128       # Number of bits per code
-K = 6         # Number of nearest neighbors
-m = 8         # Number of hash tables for MIH
+N = 15*60*1000      # Number of dataset binary codes
+NQ = 1000      # Number of query points
+B = 16       # Number of bits per code
+K = 4         # Number of nearest neighbors
+m = 4         # Number of hash tables for MIH
 range_threshold = 10  # Fixed range threshold for range search
 
 # Generate random binary dataset and queries
@@ -30,7 +30,7 @@ with h5py.File(dataset_file, "w") as f:
     f.create_dataset("Q", data=queries_packed)
 
 # Define full paths for the MIH executable and dataset file.
-exe_path = os.path.join(os.getcwd(), "build", "mih.exe")
+exe_path = os.path.join(os.getcwd(), "build", "mih")
 dataset_path = os.path.join(os.getcwd(), dataset_file)
 
 # Construct the MIH command for k‑NN search (without -r)
@@ -63,7 +63,7 @@ if os.path.exists(mih_knn_output_file):
     os.remove(mih_knn_output_file)
 if os.path.exists(mih_range_output_file):
     os.remove(mih_range_output_file)
-
+    
 print("Running k‑NN command:", " ".join(mih_knn_command))
 exit_code_knn = subprocess.run(mih_knn_command).returncode
 print("k‑NN Exit Code:", exit_code_knn)
@@ -131,7 +131,7 @@ def compute_range_counts(dataset, queries, R):
     counts = []
     for q in queries:
         dists = np.array([np.sum(q != d) for d in dataset])
-        counts.append(int(np.sum(dists < R)))
+        counts.append(int(np.sum(dists <= R)))
     return counts
 
 gt_range = compute_range_counts(dataset, queries, range_threshold)
