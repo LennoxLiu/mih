@@ -18,6 +18,7 @@ int main (int argc, char**argv) {
 	printf (" -nM <number>         Set the index from the nMs array to be used for this run (1 is the first)\n");
 	printf (" -Q <number>          Set number of query points to use from <infile>, default all\n");
 	printf (" -B <number>          Set number of bits per code, default autodetect\n");
+	printf (" -K <number>          Set number of nearest neighbors to find\n");
 	printf ("\n");
 	return 0;
     } else {
@@ -26,7 +27,7 @@ int main (int argc, char**argv) {
 		
 	UINT32 N = 0;
 	int B = 0;
-	UINT32 K = 100;
+	UINT32 K = 1;
 	int nM = 0;
 	int NQ = 0;
 	double *nMs = NULL;

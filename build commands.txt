@@ -3,3 +3,9 @@ cmake .. -DMATLABROOT="D:/Matlab" -DMATLAB_MAT_LIBRARY="D:/Matlab/extern/lib/win
 To run the code: 
 set PATH=D:\Matlab\bin\win64;%PATH%
 mih.exe [your arguments]
+
+cmake .. -DMATLABROOT="D:/Matlab2024a" -DMATLAB_MAT_LIBRARY="D:/Matlab2024a/extern/lib/win64/mingw64/libmat.lib" -DMATLAB_MEX_LIBRARY="D:/Matlab2024a/extern/lib/win64/mingw64/libmex.lib" -DMATLAB_MX_LIBRARY="D:/Matlab2024a/extern/lib/win64/mingw64/libmx.lib"
+
+To run the code: 
+set PATH=D:\Matlab2024a\bin\win64;%PATH%
+mih.exe [your arguments]

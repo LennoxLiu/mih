@@ -20,6 +20,7 @@ int main (int argc, char**argv) {
 	printf (" -Q <number>          Set the number of query points to use from <infile>, default all\n");
 	printf (" -B <number>          Set the number of bits per code, default autodetect\n");
 	printf (" -m <number>          Set the number of chunks to use, default 1\n");
+	printf (" -K <number>          Set the number of nearest neighbors to find\n");
 	printf ("\n");
 	return 0;
     }
@@ -30,7 +31,7 @@ int main (int argc, char**argv) {
     UINT32 N = 0;
     int B = 0;
     int m = 1;
-    UINT32 K = 100;
+    UINT32 K = 1;
     int nM = 0;
     int NQ = 0;
     double *nMs = NULL;
@@ -167,7 +168,7 @@ int main (int argc, char**argv) {
     time_t start1, end1;
     qstat *stats = (qstat*) new qstat[NQ];
 
-    for (K = 1; K<=1000; K *= 10) {
+	// Start each K
 	mxArray *mxresults = mxCreateNumericMatrix (K, NQ, mxUINT32_CLASS, mxREAL);
 	mxArray *mxnumres = mxCreateNumericMatrix (B+1, NQ, mxUINT32_CLASS, mxREAL);
 	mxArray *mxctime = mxCreateNumericMatrix (1, 1, mxDOUBLE_CLASS, mxREAL);
@@ -249,7 +250,7 @@ int main (int argc, char**argv) {
 	    pstats_d[5] = (double) stats[i].ticks / CLOCKS_PER_SEC;
 
 	    pstats_d += 6;
-	}
+	// end each K
 
 	mxSetFieldByNumber(mxret, ind, 0, mxresults);
 	mxSetFieldByNumber(mxret, ind, 1, mxnumres);
