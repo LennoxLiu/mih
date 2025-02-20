@@ -32,10 +32,7 @@ int main (int argc, char**argv) {
     int B = 0;
     int m = 1;
     UINT32 K = 1;
-    int nM = 0;
     int NQ = 0;
-    double *nMs = NULL;
-    int nnMs = 0;
 	
     for (int argnum = 3; argnum < argc; argnum++) {
 	if (argv[argnum][0] == '-') {
@@ -46,19 +43,19 @@ int main (int argc, char**argv) {
 	    case 'K':
 		K = atoi(argv[++argnum]);
 		break;
-	    case 'n':
-		if (!strcmp(argv[argnum], "-nMs")) {
-		    nMs = new double[100];
-		    while (++argnum < argc)
-			if (argv[argnum][0] != '-') {
-			    nMs[nnMs++] = atof(argv[argnum]);
-			} else {
-			    argnum--;
-			    break;
-			}
-		} else if (!strcmp(argv[argnum], "-nM")) {
-		    nM = atoi(argv[++argnum]);
-		}
+	    // case 'n':
+		// if (!strcmp(argv[argnum], "-nMs")) {
+		//     nMs = new double[100];
+		//     while (++argnum < argc)
+		// 	if (argv[argnum][0] != '-') {
+		// 	    nMs[nnMs++] = atof(argv[argnum]);
+		// 	} else {
+		// 	    argnum--;
+		// 	    break;
+		// 	}
+		// } else if (!strcmp(argv[argnum], "-nM")) {
+		//     nM = atoi(argv[++argnum]);
+		// }
 		break;
 	    case 'Q':
 		NQ = atoi(argv[++argnum]);
@@ -77,45 +74,44 @@ int main (int argc, char**argv) {
     }
 
     MATFile *ifp = NULL;
-    mxArray *mxnMs = NULL;
     mxArray *mxret = NULL;
-    /* Opening output file to read "ret" and "nMs" if available */
-    ifp = matOpen(outfile, "r");
-    if (ifp) {
-	mxnMs = matGetVariable(ifp, "nMs");
-	mxret = matGetVariable(ifp, "ret");
+    // /* Opening output file to read "ret" and "nMs" if available */
+    // ifp = matOpen(outfile, "r");
+    // if (ifp) {
+	// mxnMs = matGetVariable(ifp, "nMs");
+	// mxret = matGetVariable(ifp, "ret");
 
-	double *nMs2 = (double*)mxGetPr(mxnMs);
-	int nnMs2 = mxGetN(mxnMs);
+	// double *nMs2 = (double*)mxGetPr(mxnMs);
+	// int nnMs2 = mxGetN(mxnMs);
 
-	if (nMs != NULL) {
-	    if (nnMs != nnMs2) {
-		printf("#nMs is different from the #nMs read from the output file %d vs. %d.\n", nnMs, nnMs2);
-		return EXIT_FAILURE;
-	    }
-	    for (int i=0; i<nnMs; i++)
-		if (int(nMs[i]*1.0e6) !=  int(nMs2[i] * 1.0e6)) {
-		    printf("nMs are different from the nMs read from the output file.\n");
-		    return EXIT_FAILURE;
-		}
-	    delete[] nMs;
-	}
+	// if (nMs != NULL) {
+	//     if (nnMs != nnMs2) {
+	// 	printf("#nMs is different from the #nMs read from the output file %d vs. %d.\n", nnMs, nnMs2);
+	// 	return EXIT_FAILURE;
+	//     }
+	//     for (int i=0; i<nnMs; i++)
+	// 	if (int(nMs[i]*1.0e6) !=  int(nMs2[i] * 1.0e6)) {
+	// 	    printf("nMs are different from the nMs read from the output file.\n");
+	// 	    return EXIT_FAILURE;
+	// 	}
+	//     delete[] nMs;
+	// }
 
-	nnMs = nnMs2;
-	nMs = nMs2;
-	matClose (ifp);
-    } else {
-	mxnMs = mxCreateNumericMatrix(1, nnMs, mxDOUBLE_CLASS, mxREAL);
-	double *nMs2 = (double*)mxGetPr(mxnMs);
-	for (int i=0; i<nnMs; i++)
-	    nMs2[i] = nMs[i];
-	delete[] nMs;
-	nMs = nMs2;
-    }
+	// nnMs = nnMs2;
+	// nMs = nMs2;
+	// matClose (ifp);
+    // } else {
+	// mxnMs = mxCreateNumericMatrix(1, nnMs, mxDOUBLE_CLASS, mxREAL);
+	// double *nMs2 = (double*)mxGetPr(mxnMs);
+	// for (int i=0; i<nnMs; i++)
+	//     nMs2[i] = nMs[i];
+	// delete[] nMs;
+	// nMs = nMs2;
+    // }
 
     if (mxret == NULL) {
 	const char* ab[] = {"res", "nres", "stat", "wt", "cput", "vm", "rss", "m"};
-	mxret = mxCreateStructMatrix(1000, nnMs, 8, ab);
+	mxret = mxCreateStructMatrix(1000, 1, 8, ab);
     }
     /* Done with initializing mxnMs and mxret and sanity checks */
 
@@ -146,15 +142,12 @@ int main (int argc, char**argv) {
 	printf ("Non-multiple of 8 code lengths are not currently supported.\n");
 	return EXIT_FAILURE;
     }
-    N = 1.0e6 * nMs[nM-1];
-    if (N)
-	N = std::min ( (UINT32)N, (UINT32)mxGetN(mxcodes) );
+	N = (UINT32)mxGetN(mxcodes); // always use all the codes
     if (NQ > 0)
 	NQ = std::min( NQ, (int)mxGetN(mxqueries) );
     else
 	NQ = mxGetN (mxqueries);
 	
-    printf("nM = %d |", nM);
     printf(" N = %.0e |", (double)N);
     printf(" NQ = %d |", NQ);
     printf(" B = %d |", B);
@@ -279,14 +272,14 @@ int main (int argc, char**argv) {
 			
     printf("Writing results to file %s... ", outfile);
     fflush(stdout);
-    matPutVariable(ofp, "nMs", mxnMs);
+    // matPutVariable(ofp, "nMs", mxnMs);
     matPutVariable(ofp, "ret", mxret);
     printf("done.\n");
     matClose(ofp);
     /* Done with the output file */
 
     delete[] stats;
-    mxDestroyArray (mxnMs);
+    // mxDestroyArray (mxnMs);
     mxDestroyArray (mxret);
     mxDestroyArray (mxcodes);
     mxDestroyArray (mxqueries);
