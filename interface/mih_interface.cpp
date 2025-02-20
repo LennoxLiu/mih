@@ -231,7 +231,7 @@ int main (int argc, char**argv) {
 	*rss /= double(1024*1024);
 	printf ("done | cpu %.3fs | wall %.3fs | VM %.1fgb | RSS %.1fgb     \n", *ctime, *wtime, *vm, *rss);
 
-	int ind = 1000*(nM-1) + K-1;
+	int ind = K-1;
 
 	double *pstats_d = stats_d;
 	for (int i=0; i<NQ; i++) {
@@ -243,7 +243,7 @@ int main (int argc, char**argv) {
 	    pstats_d[5] = (double) stats[i].ticks / CLOCKS_PER_SEC;
 
 	    pstats_d += 6;
-	// end each K
+	}
 
 	mxSetFieldByNumber(mxret, ind, 0, mxresults);
 	mxSetFieldByNumber(mxret, ind, 1, mxnumres);
@@ -255,7 +255,7 @@ int main (int argc, char**argv) {
 	mxSetFieldByNumber(mxret, ind, 7, mxCreateDoubleScalar(m));
 
 	mold = m;
-    }
+    // } // end each K
     printf ("Clearing up... ");
     fflush (stdout);
     delete MIH;
